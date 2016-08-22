@@ -1,0 +1,162 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+import httplib, urllib2, pprint, sys, os, getopt, socket
+import simplejson as json
+from base64 import b64encode
+
+# build_apiHeaders function
+def build_apiHeaders( sessionKey = "" ):
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    if sessionKey != "":
+        headers["Authorization"] = "Basic %s" % ( sessionKey )
+
+    return headers
+    # end build_apiHeaders function
+
+def get_cred( sessionUser, sessionPassword ):
+    userAndPass = b64encode(bytes( sessionUser + ":" + sessionPassword)).decode("ascii")
+    return userAndPass
+
+def get_system( sessionKey, sessionHost, sessionPort = 12900 ):
+    requestUrl = '/system'
+
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", requestUrl, "", apiHeaders)
+
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    #print "%s: %s" % ( "Status", responseStatus )
+    #print "%s: %s" % ( "Reason", responseReason )
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_jvm( sessionKey, sessionHost, sessionPort = 12900 ):
+    requestUrl = '/system/jvm'
+
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", requestUrl, "", apiHeaders)
+
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    #print "%s: %s" % ( "Status", responseStatus )
+    #print "%s: %s" % ( "Reason", responseReason )
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def get_indexerOverview( sessionKey, sessionHost, sessionPort = 12900 ):
+    requestUrl = '/system/indexer/overview'
+
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", requestUrl, "", apiHeaders)
+
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    #print "%s: %s" % ( "Status", responseStatus )
+    #print "%s: %s" % ( "Reason", responseReason )
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
+def print_usage():
+    print 'usage: agent_graylog -H <Host> -U <User> -P <Password> -v <Value,Value> --Piggyback <Hostname>'
+
+#   .--Main----------------------------------------------------------------.
+#   |                        __  __       _                                |
+#   |                       |  \/  | __ _(_)_ __                           |
+#   |                       | |\/| |/ _` | | '_ \                          |
+#   |                       | |  | | (_| | | | | |                         |
+#   |                       |_|  |_|\__,_|_|_| |_|                         |
+#   |                                                                      |
+#   +----------------------------------------------------------------------+
+
+_defaultValues = [ "default" ]
+
+def main( argv ):
+    fetchValues = _defaultValues
+
+    sessionHost = ''
+    sessionUser = ''
+    sessionPassword = ''
+    sessionKey = ''
+    piggyback = ''
+
+    try:
+        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:", ["Host=", "User=", "Password=", "Values=", "Piggyback="])
+        if not opts:
+            print_usage()
+            sys.exit(2)
+    except getopt.GetoptError:
+        print_usage()
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print_usage()
+            sys.exit()
+        elif opt in ("-H", "--Host"):
+            sessionHost = arg
+        elif opt in ("-v", "--Values"):
+            fetchValues = arg.split(",")
+        elif opt in ("-U", "--User"):
+            sessionUser = arg
+        elif opt in ("-P", "--Post"):
+            sessionPassword = arg
+        elif opt in ("-piggy", "--Piggyback"):
+            piggyback = arg
+
+    if sessionHost == "" or sessionUser == "" or sessionPassword == "":
+        print_usage()
+        sys.exit(2)
+
+    try:
+        result = {}
+        result["sessionHost"] = sessionHost
+
+        sessionKey = get_cred( sessionUser, sessionPassword )
+
+        if piggyback != '':
+            print "<<<<" + piggyback + ">>>>"
+
+        print "<<<graylog>>>"
+
+        result["system"] = get_system( sessionKey, sessionHost )
+        result["jvm"] = get_jvm( sessionKey, sessionHost )
+        result["indexerOverview"] = get_indexerOverview( sessionKey, sessionHost )
+
+        print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
+
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+    #else:
+        
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

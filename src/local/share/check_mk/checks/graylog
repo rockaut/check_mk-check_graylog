@@ -1,0 +1,147 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+import simplejson as json
+
+################################################################################
+# __      __        _       _     _      
+# \ \    / /       (_)     | |   | |     
+#  \ \  / /_ _ _ __ _  __ _| |__ | | ___ 
+#   \ \/ / _` | '__| |/ _` | '_ \| |/ _ \
+#    \  / (_| | |  | | (_| | |_) | |  __/
+#     \/ \__,_|_|  |_|\__,_|_.__/|_|\___|
+#                                        
+################################################################################
+
+graylog_default_levels = {}
+factory_settings["graylog_default_levels"] = {
+    "is_not_processing"     : 2,
+    "lb_status_not_alive"   : 2,
+    "lifecycle_not_running" : 2,
+}
+
+################################################################################
+#   _____                                      
+#  / ____|                                     
+# | |     ___  _ __ ___  _ __ ___   ___  _ __  
+# | |    / _ \| '_ ` _ \| '_ ` _ \ / _ \| '_ \ 
+# | |___| (_) | | | | | | | | | | | (_) | | | |
+#  \_____\___/|_| |_| |_|_| |_| |_|\___/|_| |_|
+#
+################################################################################
+
+def parse_graylog(info):
+    a = [item for sublist in info for item in sublist]
+    b = ''.join(a)
+    parsed = json.loads(b)
+    return parsed
+
+################################################################################
+#    _____           _                 
+#  / ____|         | |                
+# | (___  _   _ ___| |_ ___ _ __ ___  
+#  \___ \| | | / __| __/ _ \ '_ ` _ \ 
+#  ____) | |_| \__ \ ||  __/ | | | | |
+# |_____/ \__, |___/\__\___|_| |_| |_|
+#          __/ |                      
+#         |___/
+#         
+################################################################################
+
+def inventory_graylog(parsed):
+    return [ ( "SystemInfos", {} ) ]
+
+def check_graylog(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    systemInfos = parsed["system"]
+
+    infotext = "Codename %s" % ( systemInfos["codename"] )
+
+    if systemInfos['is_processing'] != True:
+        infotext = "%s - Processing: %s" % ( infotext, systemInfos["is_processing"] )
+        state = max( params["is_not_processing"], state)
+
+    if systemInfos["lb_status"] != "alive":
+        infotext = "%s - LB Status: %s" % ( infotext, systemInfos["lb_status"] )
+        state = max( params["lb_status_not_alive"], state)
+
+    if systemInfos["lifecycle"] != "running":
+        infotext = "%s - Lifecycle: %s" % ( infotext, systemInfos["lifecycle"] )
+        state = max( params["lifecycle_not_running"], state)
+
+    if state == 0:
+        infotext = "%s is OK" % ( infotext )
+
+    return ( state, infotext )
+
+check_info["graylog"] = {
+    'default_levels_variable':  "graylog_default_levels",
+    'check_function':           check_graylog,
+    'inventory_function':       inventory_graylog,
+    'parse_function':           parse_graylog,
+    'service_description':      'System Status - %s',
+    "has_perfdata"        :     False,
+    'group':                    'Monitoring',
+}
+
+
+
+def inventory_graylog_jvm(parsed):
+    return [ ( "JVM", {} ) ]
+
+def check_graylog_jvm(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    data = parsed["jvm"]
+
+    infotext = "%s MB of %s MB" % ( data["free_memory"]["megabytes"], data["max_memory"]["megabytes"] )
+
+    return ( state, infotext )
+
+
+check_info["graylog.jvm"] = {
+    'default_levels_variable':  "graylog_default_levels",
+    'check_function':           check_graylog_jvm,
+    'inventory_function':       inventory_graylog_jvm,
+    'parse_function':           parse_graylog,
+    'service_description':      'JVM Status - %s',
+    "has_perfdata"        :     False,
+    'group':                    'Monitoring',
+}
+
+
+def inventory_graylog_indexerOverview(parsed):
+    return [ ( "JVM", {} ) ]
+
+def check_graylog_indexerOverview(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    data = parsed["indexerOverview"]
+
+    infotext = "%s MB of %s MB" % ( data["free_memory"]["megabytes"], data["max_memory"]["megabytes"] )
+
+    return ( state, infotext )
+
+
+check_info["graylog.indexerOverview"] = {
+    'default_levels_variable':  "graylog_default_levels",
+    'check_function':           check_graylog_indexerOverview,
+    'inventory_function':       inventory_graylog_indexerOverview,
+    'parse_function':           parse_graylog,
+    'service_description':      'Indexer Overview - %s',
+    "has_perfdata"        :     False,
+    'group':                    'Monitoring',
+}
