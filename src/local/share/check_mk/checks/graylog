@@ -18,6 +18,10 @@ factory_settings["graylog_default_levels"] = {
     "is_not_processing"     : 2,
     "lb_status_not_alive"   : 2,
     "lifecycle_not_running" : 2,
+    "deflector_is_down"     : 2,
+    "indexer_cluster_health_green"  : 0,
+    "indexer_cluster_health_yellow" : 1,
+    "indexer_cluster_health_red"    : 2,
 }
 
 ################################################################################
@@ -120,7 +124,7 @@ check_info["graylog.jvm"] = {
 
 
 def inventory_graylog_indexerOverview(parsed):
-    return [ ( "JVM", {} ) ]
+    return [ ( "Overview", {} ) ]
 
 def check_graylog_indexerOverview(item, params, parsed):
     state       = 3
@@ -128,12 +132,74 @@ def check_graylog_indexerOverview(item, params, parsed):
 
     state    = 0                 # TODO: echten State übergeben
     infotext = ""
+    perfdata    = []
 
     data = parsed["indexerOverview"]
 
-    infotext = "%s MB of %s MB" % ( data["free_memory"]["megabytes"], data["max_memory"]["megabytes"] )
+    infotext = "Deflector %s" % ( data["deflector"]["current_target"] )
 
-    return ( state, infotext )
+    if data["deflector"]["is_up"] != True:
+        infotext = "%s is DOWN" % ( infotext )
+        state = max( params["deflector_is_down"], state )
+
+    indicesCount    = 0
+    indicesClosed   = 0
+    indicesReopened = 0
+    
+    indicesBytesMin     = 0
+    indicesBytesMax     = 0
+    indicesBytesAvg     = 0
+    indicesBytesTotal   = 0
+
+    indicesDeletedMin   = 0
+    indicesDeletedMax   = 0
+    indicesDeletedAvg   = 0
+    indicesDeletedTotal = 0
+
+    indicesEventsMin = 0
+    indicesEventsMax = 0
+    indicesEventsAvg = 0
+
+    for index in data["indices"]:
+        indicesCount += 1
+        indicesReopened += 1 if data["indices"][index]["is_reopened"] else 0
+        indicesClosed += 1 if data["indices"][index]["is_closed"] else 0
+        
+        indicesBytesMin   = data["indices"][index]["size"]["bytes"] if indicesBytesMin == 0 else min( indicesBytesMin, data["indices"][index]["size"]["bytes"] )
+        indicesBytesMax   = max( indicesBytesMax, data["indices"][index]["size"]["bytes"] )
+        indicesBytesTotal = indicesBytesTotal + data["indices"][index]["size"]["bytes"]
+        
+        indicesDeletedMin   = data["indices"][index]["size"]["deleted"] if indicesDeletedMin == 0 else min( indicesDeletedMin, data["indices"][index]["size"]["deleted"] )
+        indicesDeletedMax   = max( indicesDeletedMax, data["indices"][index]["size"]["deleted"] )
+        indicesDeletedTotal = indicesDeletedTotal + data["indices"][index]["size"]["deleted"]
+
+        indicesEventsMin   = data["indices"][index]["size"]["events"] if indicesEventsMin == 0 else min( indicesEventsMin, data["indices"][index]["size"]["events"] )
+        indicesEventsMax   = max( indicesEventsMax, data["indices"][index]["size"]["events"] )
+
+    indicesBytesAvg   = indicesBytesTotal / indicesCount
+    indicesDeletedAvg = indicesDeletedTotal / indicesCount
+    indicesEventsAvg  = data["counts"]["events"] / indicesCount
+
+    perfdata.append( ( "indices.total", indicesCount, ) )
+    perfdata.append( ( "indices.reopened", indicesReopened, 0, 0, 0, indicesCount ) )
+    perfdata.append( ( "indices.closed", indicesClosed, 0, 0, 0, indicesCount ) )
+
+    perfdata.append( ( "indices.bytes.min", indicesBytesMin ) )
+    perfdata.append( ( "indices.bytes.max", indicesBytesMax ) )
+    perfdata.append( ( "indices.bytes.avg", indicesBytesAvg ) )
+    perfdata.append( ( "indices.bytes.total", indicesBytesTotal ) )
+    
+    perfdata.append( ( "indices.deleted.min", indicesDeletedMin ) )
+    perfdata.append( ( "indices.deleted.max", indicesDeletedMax ) )
+    perfdata.append( ( "indices.deleted.avg", indicesDeletedAvg ) )
+    perfdata.append( ( "indices.deleted.total", indicesDeletedTotal ) )
+
+    perfdata.append( ( "events.min", indicesEventsMin ) )
+    perfdata.append( ( "events.max", indicesEventsMax ) )
+    perfdata.append( ( "events.avg", indicesEventsAvg ) )
+    perfdata.append( ( "events.total", data["counts"]["events"] ) )
+
+    return ( state, infotext, perfdata )
 
 
 check_info["graylog.indexerOverview"] = {
@@ -141,7 +207,47 @@ check_info["graylog.indexerOverview"] = {
     'check_function':           check_graylog_indexerOverview,
     'inventory_function':       inventory_graylog_indexerOverview,
     'parse_function':           parse_graylog,
-    'service_description':      'Indexer Overview - %s',
-    "has_perfdata"        :     False,
+    'service_description':      'Indexer - %s',
+    "has_perfdata"        :     True,
+    'group':                    'Monitoring',
+}
+
+def inventory_graylog_indexerCluster(parsed):
+    return [ ( "Cluster", {} ) ]
+
+def check_graylog_indexerCluster(item, params, parsed):
+    state       = 3
+    infotext    = "No item implemented"
+
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+    perfdata    = []
+
+    data = parsed["indexerOverview"]["indexer_cluster"]
+
+    infotext = "Cluster Health is %s" % ( data["health"]["status"] )
+
+    if data["health"]["status"] == "green":
+        state = max( params["indexer_cluster_health_green"], state )
+    elif data["health"]["status"] == "yellow":
+        state = max( params["indexer_cluster_health_yellow"], state )
+    elif data["health"]["status"] == "red":
+        state = max( params["indexer_cluster_health_red"], state )
+
+    perfdata.append( ( "shards.active", data["health"]["shards"]["active"] ) )
+    perfdata.append( ( "shards.initializing", data["health"]["shards"]["initializing"] ) )
+    perfdata.append( ( "shards.relocating", data["health"]["shards"]["relocating"] ) )
+    perfdata.append( ( "shards.unassigned", data["health"]["shards"]["unassigned"] ) )
+
+    return ( state, infotext, perfdata )
+
+
+check_info["graylog.indexerCluster"] = {
+    'default_levels_variable':  "graylog_default_levels",
+    'check_function':           check_graylog_indexerCluster,
+    'inventory_function':       inventory_graylog_indexerCluster,
+    'parse_function':           parse_graylog,
+    'service_description':      'Indexer - %s',
+    "has_perfdata"        :     True,
     'group':                    'Monitoring',
 }
