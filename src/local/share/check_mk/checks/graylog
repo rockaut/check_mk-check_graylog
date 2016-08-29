@@ -36,8 +36,9 @@ factory_settings["graylog_default_levels"] = {
 
 def parse_graylog(info):
     a = [item for sublist in info for item in sublist]
-    b = ''.join(a)
-    parsed = json.loads(b)
+    b = ' '.join(a)
+    c = ''.join(b)
+    parsed = json.loads(c)
     return parsed
 
 ################################################################################
@@ -281,5 +282,88 @@ check_info["graylog.indexerCluster"] = {
     'parse_function':           parse_graylog,
     'service_description':      'Indexer - %s',
     "has_perfdata"        :     True,
+    'group':                    'Monitoring',
+}
+
+################################################################################
+#  _                   _    _____ _        _            
+# (_)                 | |  / ____| |      | |           
+#  _ _ __  _ __  _   _| |_| (___ | |_ __ _| |_ ___  ___ 
+# | | '_ \| '_ \| | | | __|\___ \| __/ _` | __/ _ \/ __|
+# | | | | | |_) | |_| | |_ ____) | || (_| | ||  __/\__ \
+# |_|_| |_| .__/ \__,_|\__|_____/ \__\__,_|\__\___||___/
+#         | |                                           
+#         |_|                                           
+#
+################################################################################
+
+
+graylog_input_default_levels = {}
+factory_settings["graylog_input_default_levels"] = {
+    "state_running" : 0,
+    "state_stopped" : 2,
+}
+
+def inventory_graylog_inputs(parsed):
+    if "inputs" in parsed:
+        inputs = []
+        for input in parsed["inputs"]:
+            inputs += [ ( input["id"], {} ) ]
+        return inputs
+
+    if "inputStates" in parsed:
+        inputs = []
+        for input in parsed["inputStates"]["states"]:
+            inputs += [ ( input["message_input"]["id"], {} ) ]
+        return inputs
+        
+    # return empty if section not found
+    return [  ]
+
+def check_graylog_inputs(item, params, parsed):
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    inputsData = parsed["inputs"]
+    inputStatesData = parsed["inputStates"]
+
+    singleState = None
+
+    for systemInput in inputsData:
+        if systemInput["id"] == item:
+            infotext = "Port %s - %s" % ( systemInput["attributes"]["port"], systemInput["title"] )
+
+            for node in inputStatesData:
+                for inputState in inputStatesData[node]:
+                    if inputState["id"] != item:
+                        continue
+                    else:
+                        singleState = inputState
+                        break
+
+                if singleState != None:
+                    break
+
+            if singleState == None:
+                infotext = "%s - %s" % ( "STOPPED", infotext)
+                state = max( params["state_stopped"], state )
+            else:
+                infotext = "%s - %s" % ( singleState["state"], infotext )
+                if singleState["state"] == "RUNNING":
+                    state = max( params["state_running"], state )
+                else:
+                    state = max( params["state_stopped"], state )
+
+            return ( state, infotext )
+
+    return ( 3, "No item implemented" )
+
+check_info["graylog.inputs"] = {
+    'default_levels_variable':  "graylog_input_default_levels",
+    'check_function':           check_graylog_inputs,
+    'inventory_function':       inventory_graylog_inputs,
+    'parse_function':           parse_graylog,
+    'service_description':      'Status - %s',
+    "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
