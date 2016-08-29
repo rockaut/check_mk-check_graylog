@@ -89,7 +89,7 @@ check_info["graylog"] = {
     'check_function':           check_graylog,
     'inventory_function':       inventory_graylog,
     'parse_function':           parse_graylog,
-    'service_description':      'System Status - %s',
+    'service_description':      'Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
@@ -126,7 +126,7 @@ check_info["graylog.jvm"] = {
     'check_function':           check_graylog_jvm,
     'inventory_function':       inventory_graylog_jvm,
     'parse_function':           parse_graylog,
-    'service_description':      'JVM Status - %s',
+    'service_description':      'Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
