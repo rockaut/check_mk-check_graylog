@@ -85,6 +85,27 @@ def get_indexerOverview( sessionKey, sessionHost, sessionPort = 12900 ):
 
     return parsed_response
 
+def get_inputs( sessionKey, sessionHost, sessionPort = 12900 ):
+    requestUrl = '/system/inputs'
+
+    apiHeaders = build_apiHeaders( sessionKey )
+
+    conn = httplib.HTTPConnection( sessionHost, sessionPort, timeout=10)
+    conn.request("GET", requestUrl, "", apiHeaders)
+
+    response = conn.getresponse()
+    responseData = response.read()
+    responseStatus = response.status
+    responseReason = response.reason
+    conn.close()
+
+    #print "%s: %s" % ( "Status", responseStatus )
+    #print "%s: %s" % ( "Reason", responseReason )
+
+    parsed_response = json.loads( responseData )
+
+    return parsed_response
+
 def get_inputstates( sessionKey, sessionHost, sessionPort = 12900 ):
     requestUrl = '/system/inputstates'
 
@@ -172,6 +193,7 @@ def main( argv ):
         result["system"] = get_system( sessionKey, sessionHost )
         result["jvm"] = get_jvm( sessionKey, sessionHost )
         result["indexerOverview"] = get_indexerOverview( sessionKey, sessionHost )
+        result["inputs"] = get_inputs( sessionKey, sessionHost )
         result["inputStates"] = get_inputstates( sessionKey, sessionHost )
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
