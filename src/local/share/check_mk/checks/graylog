@@ -65,7 +65,7 @@ def check_graylog(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    infotext = "Codename %s" % ( systemInfos["codename"] )
+    infotext = "Node %s - Codename %s" % ( systemInfos["node_id"], systemInfos["codename"] )
 
     if systemInfos['is_processing'] != True:
         infotext = "%s - Processing: %s" % ( infotext, systemInfos["is_processing"] )
@@ -78,9 +78,6 @@ def check_graylog(item, params, parsed):
     if systemInfos["lifecycle"] != "running":
         infotext = "%s - Lifecycle: %s" % ( infotext, systemInfos["lifecycle"] )
         state = max( params["lifecycle_not_running"], state)
-
-    if state == 0:
-        infotext = "%s is OK" % ( infotext )
 
     return ( state, infotext )
 
