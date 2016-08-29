@@ -1,4 +1,8 @@
 # Check_MK Agent for Graylog REST API
+ 
+This check plugin for Check_MK monitors several important stats and stati of your graylog cluster/system. 
+ 
+The plugin has been tested to work with check_mk and nagios ( with Thruk as frontend ) installed through OMD. For detailed versions see "Prerequisites". 
 
 ## Prerequisites
 - Build and tested only on OMD Consol-Labs Edition 2.10 ( CMK 1.2.6p12 )
