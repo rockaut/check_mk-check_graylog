@@ -193,7 +193,7 @@ def main( argv ):
         result["system"] = get_system( sessionKey, sessionHost )
         result["jvm"] = get_jvm( sessionKey, sessionHost )
         result["indexerOverview"] = get_indexerOverview( sessionKey, sessionHost )
-        result["inputs"] = get_inputs( sessionKey, sessionHost )
+        result["inputs"] = get_inputs( sessionKey, sessionHost )["inputs"]
         result["inputStates"] = get_inputstates( sessionKey, sessionHost )
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
