@@ -36,8 +36,9 @@ factory_settings["graylog_default_levels"] = {
 
 def parse_graylog(info):
     a = [item for sublist in info for item in sublist]
-    b = ''.join(a)
-    parsed = json.loads(b)
+    b = ' '.join(a)
+    c = ''.join(b)
+    parsed = json.loads(c)
     return parsed
 
 ################################################################################
@@ -64,7 +65,7 @@ def check_graylog(item, params, parsed):
 
     systemInfos = parsed["system"]
 
-    infotext = "Codename %s" % ( systemInfos["codename"] )
+    infotext = "Node %s - Codename %s" % ( systemInfos["node_id"], systemInfos["codename"] )
 
     if systemInfos['is_processing'] != True:
         infotext = "%s - Processing: %s" % ( infotext, systemInfos["is_processing"] )
@@ -78,9 +79,6 @@ def check_graylog(item, params, parsed):
         infotext = "%s - Lifecycle: %s" % ( infotext, systemInfos["lifecycle"] )
         state = max( params["lifecycle_not_running"], state)
 
-    if state == 0:
-        infotext = "%s is OK" % ( infotext )
-
     return ( state, infotext )
 
 check_info["graylog"] = {
@@ -88,12 +86,20 @@ check_info["graylog"] = {
     'check_function':           check_graylog,
     'inventory_function':       inventory_graylog,
     'parse_function':           parse_graylog,
-    'service_description':      'System Status - %s',
+    'service_description':      'Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
 
-
+################################################################################
+#       ___      ____  __ 
+#      | \ \    / /  \/  |
+#      | |\ \  / /| \  / |
+#  _   | | \ \/ / | |\/| |
+# | |__| |  \  /  | |  | |
+#  \____/    \/   |_|  |_|
+#                         
+################################################################################                       
 
 def inventory_graylog_jvm(parsed):
     return [ ( "JVM", {} ) ]
@@ -117,11 +123,20 @@ check_info["graylog.jvm"] = {
     'check_function':           check_graylog_jvm,
     'inventory_function':       inventory_graylog_jvm,
     'parse_function':           parse_graylog,
-    'service_description':      'JVM Status - %s',
+    'service_description':      'Status - %s',
     "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
 
+################################################################################
+#  _           _                     ____                       _               
+# (_)         | |                   / __ \                     (_)              
+#  _ _ __   __| | _____  _____ _ __| |  | |_   _____ _ ____   ___  _____      __
+# | | '_ \ / _` |/ _ \ \/ / _ \ '__| |  | \ \ / / _ \ '__\ \ / / |/ _ \ \ /\ / /
+# | | | | | (_| |  __/>  <  __/ |  | |__| |\ V /  __/ |   \ V /| |  __/\ V  V / 
+# |_|_| |_|\__,_|\___/_/\_\___|_|   \____/  \_/ \___|_|    \_/ |_|\___| \_/\_/  
+#                                                                               
+################################################################################                                                                               
 
 def inventory_graylog_indexerOverview(parsed):
     return [ ( "Overview", {} ) ]
@@ -160,11 +175,16 @@ def check_graylog_indexerOverview(item, params, parsed):
     indicesEventsMax = 0
     indicesEventsAvg = 0
 
+    "print ---"
+
     for index in data["indices"]:
         indicesCount += 1
         indicesReopened += 1 if data["indices"][index]["is_reopened"] else 0
         indicesClosed += 1 if data["indices"][index]["is_closed"] else 0
         
+        if data["indices"][index]["size"] == None:
+            continue
+
         indicesBytesMin   = data["indices"][index]["size"]["bytes"] if indicesBytesMin == 0 else min( indicesBytesMin, data["indices"][index]["size"]["bytes"] )
         indicesBytesMax   = max( indicesBytesMax, data["indices"][index]["size"]["bytes"] )
         indicesBytesTotal = indicesBytesTotal + data["indices"][index]["size"]["bytes"]
@@ -212,6 +232,16 @@ check_info["graylog.indexerOverview"] = {
     'group':                    'Monitoring',
 }
 
+################################################################################
+#  _           _                     _____ _           _            
+# (_)         | |                   / ____| |         | |           
+#  _ _ __   __| | _____  _____ _ __| |    | |_   _ ___| |_ ___ _ __ 
+# | | '_ \ / _` |/ _ \ \/ / _ \ '__| |    | | | | / __| __/ _ \ '__|
+# | | | | | (_| |  __/>  <  __/ |  | |____| | |_| \__ \ ||  __/ |   
+# |_|_| |_|\__,_|\___/_/\_\___|_|   \_____|_|\__,_|___/\__\___|_|   
+#                                                                   
+################################################################################
+
 def inventory_graylog_indexerCluster(parsed):
     return [ ( "Cluster", {} ) ]
 
@@ -249,5 +279,88 @@ check_info["graylog.indexerCluster"] = {
     'parse_function':           parse_graylog,
     'service_description':      'Indexer - %s',
     "has_perfdata"        :     True,
+    'group':                    'Monitoring',
+}
+
+################################################################################
+#  _                   _    _____ _        _            
+# (_)                 | |  / ____| |      | |           
+#  _ _ __  _ __  _   _| |_| (___ | |_ __ _| |_ ___  ___ 
+# | | '_ \| '_ \| | | | __|\___ \| __/ _` | __/ _ \/ __|
+# | | | | | |_) | |_| | |_ ____) | || (_| | ||  __/\__ \
+# |_|_| |_| .__/ \__,_|\__|_____/ \__\__,_|\__\___||___/
+#         | |                                           
+#         |_|                                           
+#
+################################################################################
+
+
+graylog_input_default_levels = {}
+factory_settings["graylog_input_default_levels"] = {
+    "state_running" : 0,
+    "state_stopped" : 2,
+}
+
+def inventory_graylog_inputs(parsed):
+    if "inputs" in parsed:
+        inputs = []
+        for input in parsed["inputs"]:
+            inputs += [ ( input["id"], {} ) ]
+        return inputs
+
+    if "inputStates" in parsed:
+        inputs = []
+        for input in parsed["inputStates"]["states"]:
+            inputs += [ ( input["message_input"]["id"], {} ) ]
+        return inputs
+        
+    # return empty if section not found
+    return [  ]
+
+def check_graylog_inputs(item, params, parsed):
+    state    = 0                 # TODO: echten State übergeben
+    infotext = ""
+
+    inputsData = parsed["inputs"]
+    inputStatesData = parsed["inputStates"]
+
+    singleState = None
+
+    for systemInput in inputsData:
+        if systemInput["id"] == item:
+            infotext = "Port %s - %s" % ( systemInput["attributes"]["port"], systemInput["title"] )
+
+            for node in inputStatesData:
+                for inputState in inputStatesData[node]:
+                    if inputState["id"] != item:
+                        continue
+                    else:
+                        singleState = inputState
+                        break
+
+                if singleState != None:
+                    break
+
+            if singleState == None:
+                infotext = "%s - %s" % ( "STOPPED", infotext)
+                state = max( params["state_stopped"], state )
+            else:
+                infotext = "%s - %s" % ( singleState["state"], infotext )
+                if singleState["state"] == "RUNNING":
+                    state = max( params["state_running"], state )
+                else:
+                    state = max( params["state_stopped"], state )
+
+            return ( state, infotext )
+
+    return ( 3, "No item implemented" )
+
+check_info["graylog.inputs"] = {
+    'default_levels_variable':  "graylog_input_default_levels",
+    'check_function':           check_graylog_inputs,
+    'inventory_function':       inventory_graylog_inputs,
+    'parse_function':           parse_graylog,
+    'service_description':      'Status - %s',
+    "has_perfdata"        :     False,
     'group':                    'Monitoring',
 }
