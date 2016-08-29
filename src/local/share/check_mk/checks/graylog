@@ -160,11 +160,16 @@ def check_graylog_indexerOverview(item, params, parsed):
     indicesEventsMax = 0
     indicesEventsAvg = 0
 
+    "print ---"
+
     for index in data["indices"]:
         indicesCount += 1
         indicesReopened += 1 if data["indices"][index]["is_reopened"] else 0
         indicesClosed += 1 if data["indices"][index]["is_closed"] else 0
         
+        if data["indices"][index]["size"] == None:
+            continue
+
         indicesBytesMin   = data["indices"][index]["size"]["bytes"] if indicesBytesMin == 0 else min( indicesBytesMin, data["indices"][index]["size"]["bytes"] )
         indicesBytesMax   = max( indicesBytesMax, data["indices"][index]["size"]["bytes"] )
         indicesBytesTotal = indicesBytesTotal + data["indices"][index]["size"]["bytes"]
