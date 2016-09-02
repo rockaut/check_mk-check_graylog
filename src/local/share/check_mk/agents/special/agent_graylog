@@ -23,11 +23,11 @@ def get_cred( sessionUser, sessionPassword ):
     return userAndPass
 
 def get_system( sessionKey, sessionHost, sessionPort = 12900 ):
-    requestUrl = '/system'
+    requestUrl = '/api/system'
 
     apiHeaders = build_apiHeaders( sessionKey )
 
-    conn = httplib.HTTPConnection( sessionHost, sessionPort, timeout=10)
+    conn = httplib.HTTPConnection(sessionHost, sessionPort, timeout=10)
     conn.request("GET", requestUrl, "", apiHeaders)
 
     response = conn.getresponse()
@@ -44,7 +44,7 @@ def get_system( sessionKey, sessionHost, sessionPort = 12900 ):
     return parsed_response
 
 def get_jvm( sessionKey, sessionHost, sessionPort = 12900 ):
-    requestUrl = '/system/jvm'
+    requestUrl = '/api/system/jvm'
 
     apiHeaders = build_apiHeaders( sessionKey )
 
@@ -65,7 +65,7 @@ def get_jvm( sessionKey, sessionHost, sessionPort = 12900 ):
     return parsed_response
 
 def get_indexerOverview( sessionKey, sessionHost, sessionPort = 12900 ):
-    requestUrl = '/system/indexer/overview'
+    requestUrl = '/api/system/indexer/overview'
 
     apiHeaders = build_apiHeaders( sessionKey )
 
@@ -86,7 +86,7 @@ def get_indexerOverview( sessionKey, sessionHost, sessionPort = 12900 ):
     return parsed_response
 
 def get_inputs( sessionKey, sessionHost, sessionPort = 12900 ):
-    requestUrl = '/system/inputs'
+    requestUrl = '/api/system/inputs'
 
     apiHeaders = build_apiHeaders( sessionKey )
 
@@ -107,7 +107,7 @@ def get_inputs( sessionKey, sessionHost, sessionPort = 12900 ):
     return parsed_response
 
 def get_inputstates( sessionKey, sessionHost, sessionPort = 12900 ):
-    requestUrl = '/system/inputstates'
+    requestUrl = '/api/system/inputstates'
 
     apiHeaders = build_apiHeaders( sessionKey )
 
@@ -129,7 +129,7 @@ def get_inputstates( sessionKey, sessionHost, sessionPort = 12900 ):
     
 
 def print_usage():
-    print 'usage: agent_graylog -H <Host> -U <User> -P <Password> -v <Value,Value> --Piggyback <Hostname>'
+    print 'usage: agent_graylog -H <Host> -p <Port> -U <User> -P <Password> -v <Value,Value> --Piggyback <Hostname>'
 
 #   .--Main----------------------------------------------------------------.
 #   |                        __  __       _                                |
@@ -149,10 +149,11 @@ def main( argv ):
     sessionUser = ''
     sessionPassword = ''
     sessionKey = ''
+    sessionPort = 12900
     piggyback = ''
 
     try:
-        opts, args = getopt.getopt( argv, "hH:hU:hP:hv:", ["Host=", "User=", "Password=", "Values=", "Piggyback="])
+        opts, args = getopt.getopt( argv, "hH:hp:hU:hP:hv:", ["Host=", "Port=", "User=", "Password=", "Values=", "Piggyback="])
         if not opts:
             print_usage()
             sys.exit(2)
@@ -166,11 +167,13 @@ def main( argv ):
             sys.exit()
         elif opt in ("-H", "--Host"):
             sessionHost = arg
+        elif opt in ("-p", "--port"):
+            sessionPort = int(arg)
         elif opt in ("-v", "--Values"):
             fetchValues = arg.split(",")
         elif opt in ("-U", "--User"):
             sessionUser = arg
-        elif opt in ("-P", "--Post"):
+        elif opt in ("-P", "--Password"):
             sessionPassword = arg
         elif opt in ("-piggy", "--Piggyback"):
             piggyback = arg
@@ -189,12 +192,12 @@ def main( argv ):
             print "<<<<" + piggyback + ">>>>"
 
         print "<<<graylog>>>"
-
-        result["system"] = get_system( sessionKey, sessionHost )
-        result["jvm"] = get_jvm( sessionKey, sessionHost )
-        result["indexerOverview"] = get_indexerOverview( sessionKey, sessionHost )
-        result["inputs"] = get_inputs( sessionKey, sessionHost )["inputs"]
-        result["inputStates"] = get_inputstates( sessionKey, sessionHost )
+        
+        result["system"] = get_system( sessionKey, sessionHost, sessionPort )
+        result["jvm"] = get_jvm( sessionKey, sessionHost, sessionPort )
+        result["indexerOverview"] = get_indexerOverview( sessionKey, sessionHost, sessionPort )
+        result["inputs"] = get_inputs( sessionKey, sessionHost, sessionPort )["inputs"]
+        result["inputStates"] = get_inputstates( sessionKey, sessionHost, sessionPort )
 
         print json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
 
