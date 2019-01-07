@@ -1,3 +1,7 @@
+```
+!!! DEPRECATED - will not update as not in use anymore
+```
+
 # Check_MK Agent for Graylog REST API
  
 This check plugin for Check_MK monitors several important stats and stati of your graylog cluster/system. 
